@@ -1,0 +1,15 @@
+
+services:
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_DB: testdb
+    ports:
+      - "5432:5432"

@@ -1,0 +1,13 @@
+{
+  "name": "ci-db-test",
+  "scripts": {
+    "test:parallel": "jest --runInBand --verbose --detectOpenHandles"
+},
+  "dependencies": {
+    "mongodb": "^5.7.0",
+    "pg": "^8.11.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
