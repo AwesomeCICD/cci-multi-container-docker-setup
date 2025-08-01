@@ -1,0 +1,79 @@
+version: 2.1
+
+workflows:
+  multi-container-test:
+    jobs:
+      - docker-setup
+      - long-setup
+
+executors:
+  multi-docker-executor:
+    docker:
+      - image: cimg/node:lts
+      - image: postgres:15
+        environment:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+      - image: mongo:7
+      - image: public.ecr.aws/aws-dynamodb-local/aws-dynamodb-local:latest
+      - image: public.ecr.aws/docker/library/redis:latest
+      - image: public.ecr.aws/i1i0w6p5/spicedb:v1.8.0
+      - image: public.ecr.aws/aws-stepfunctions/amazon/aws-stepfunctions-local:2.0.0
+    working_directory: ~/project
+    resource_class: small
+
+commands:
+  prepare-tests:
+    steps:
+      - checkout
+      - run:
+          name: Wait for Postgres and MongoDB
+          command: |
+            cd scripts
+            bash wait-for.sh localhost 5432 echo "Postgres is ready"
+            bash wait-for.sh localhost 27017 echo "MongoDB is ready"
+      - run:
+          name: Confirm Step Functions is up
+          command: |
+            curl -s http://localhost:8083 | head -c 100 || echo "No response (expected for empty POSTs)"
+      - run:
+          name: Install dependencies
+          working_directory: ~/project/server
+          command: |
+            yarn install
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+
+jobs:
+  docker-setup:
+    executor: multi-docker-executor
+    steps:
+      - prepare-tests
+      - run:
+          name: Run tests (split by timings)
+          working_directory: ~/project/server
+          environment:
+            POSTGRES: postgres://testuser:testpass@localhost:5432/testdb
+            MONGO_URL: mongodb://localhost:27017
+          command: |
+            mkdir -p logs
+            cat utils/test_parallel.txt | circleci tests run --verbose --split-by=timings --command="xargs yarn test:parallel --verbose"
+
+  long-setup:
+    executor: multi-docker-executor
+    steps:
+      - prepare-tests
+      - run:
+          name: Run tests
+          working_directory: ~/project/server
+          environment:
+            POSTGRES: postgres://testuser:testpass@localhost:5432/testdb
+            MONGO_URL: mongodb://localhost:27017
+            REDIS_URL: redis://localhost:6379
+            DYNAMODB_ENDPOINT: http://localhost:8000
+            STEP_FUNCTIONS_ENDPOINT: http://localhost:8083
+            SPICEDB_ENDPOINT: localhost:50051
+            SPICEDB_PSK: local
+          command: |
+            cat utils/test_parallel.txt | circleci tests run --verbose --split-by=timings --command="xargs yarn test:parallel --verbose --detectOpenHandles"
+
