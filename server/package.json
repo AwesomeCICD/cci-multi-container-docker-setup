@@ -2,8 +2,9 @@
   "name": "ci-db-test",
   "scripts": {
     "test:parallel": "jest --runInBand --verbose --detectOpenHandles"
-},
+  },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.859.0",
     "mongodb": "^5.7.0",
     "pg": "^8.11.1"
   },
