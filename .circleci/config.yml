@@ -3,8 +3,10 @@ version: 2.1
 workflows:
   multi-container-test:
     jobs:
-      - docker-setup
-      - long-setup
+      - docker-setup:
+           resource_class: "medium"
+      - long-setup:
+           resource_class: "2xlarge"
 
 executors:
   multi-docker-executor:
@@ -21,7 +23,6 @@ executors:
       - image: public.ecr.aws/i1i0w6p5/spicedb:v1.8.0
       - image: public.ecr.aws/aws-stepfunctions/amazon/aws-stepfunctions-local:2.0.0
     working_directory: ~/project
-    resource_class: small
 
 commands:
   prepare-tests:
@@ -47,6 +48,10 @@ commands:
 jobs:
   docker-setup:
     executor: multi-docker-executor
+    resource_class: <<parameters.resource_class>>
+    parameters:
+      resource_class:
+        type: string
     steps:
       - prepare-tests
       - run:
@@ -61,6 +66,10 @@ jobs:
 
   long-setup:
     executor: multi-docker-executor
+    resource_class: <<parameters.resource_class>>
+    parameters:
+      resource_class:
+        type: string
     steps:
       - prepare-tests
       - run:
@@ -75,5 +84,5 @@ jobs:
             SPICEDB_ENDPOINT: localhost:50051
             SPICEDB_PSK: local
           command: |
-            cat utils/test_parallel.txt | circleci tests run --verbose --split-by=timings --command="xargs yarn test:parallel --verbose --detectOpenHandles"
+            cat utils/test_long.txt | circleci tests run --verbose --split-by=timings --command="xargs yarn test:parallel --verbose --detectOpenHandles"
 
