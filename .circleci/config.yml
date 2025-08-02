@@ -1,12 +1,19 @@
 version: 2.1
 
+parameters:
+  postgres-connection-string:
+    type: string
+    default: "postgres://testuser:testpass@localhost:5432/testdb"
+
 workflows:
   multi-container-test:
     jobs:
       - docker-setup:
            resource_class: "medium"
+           manifest_file: "utils/test_parallel.txt"
       - long-setup:
            resource_class: "large"
+           manifest_file: "utils/test_long.txt"
 
 executors:
   multi-docker-executor:
@@ -52,17 +59,19 @@ jobs:
     parameters:
       resource_class:
         type: string
+      manifest_file:
+        type: string
     steps:
       - prepare-tests
       - run:
           name: Run tests (split by timings)
           working_directory: ~/project/server
           environment:
-            POSTGRES: postgres://testuser:testpass@localhost:5432/testdb
+            POSTGRES: <<pipeline.parameters.postgres-connection-string>>
             MONGO_URL: mongodb://localhost:27017
           command: |
             mkdir -p logs
-            cat utils/test_parallel.txt | circleci tests run --verbose --split-by=timings --command="xargs yarn test:parallel --verbose"
+            cat <<parameters.manifest_file>> | circleci tests run --verbose --split-by=timings --command="xargs yarn test:parallel --verbose"
 
   long-setup:
     executor: multi-docker-executor
@@ -70,13 +79,15 @@ jobs:
     parameters:
       resource_class:
         type: string
+      manifest_file:
+        type: string
     steps:
       - prepare-tests
       - run:
           name: Run tests
           working_directory: ~/project/server
           environment:
-            POSTGRES: postgres://testuser:testpass@localhost:5432/testdb
+            POSTGRES: <<pipeline.parameters.postgres-connection-string>>
             MONGO_URL: mongodb://localhost:27017
             REDIS_URL: redis://localhost:6379
             DYNAMODB_ENDPOINT: http://localhost:8000
@@ -84,5 +95,8 @@ jobs:
             SPICEDB_ENDPOINT: localhost:50051
             SPICEDB_PSK: local
           command: |
-            cat utils/test_long.txt | circleci tests run --verbose --split-by=timings --command="xargs yarn test:parallel --verbose --detectOpenHandles"
-
+            cat <<parameters.manifest_file>> | circleci tests run \
+              --verbose --split-by=timings \
+              --command="xargs yarn test:parallel \
+              --verbose --detectOpenHandles"
+  
