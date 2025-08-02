@@ -6,7 +6,7 @@ workflows:
       - docker-setup:
            resource_class: "medium"
       - long-setup:
-           resource_class: "2xlarge"
+           resource_class: "large"
 
 executors:
   multi-docker-executor:

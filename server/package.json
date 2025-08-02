@@ -5,8 +5,10 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.859.0",
+    "axios": "^1.11.0",
     "mongodb": "^5.7.0",
-    "pg": "^8.11.1"
+    "pg": "^8.11.1",
+    "redis": "^5.7.0"
   },
   "devDependencies": {
     "jest": "^29.7.0"
